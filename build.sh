@@ -4,10 +4,27 @@ set -e
 mattermostRepo='https://github.com/mattermost/platform'
 mattermostSshRepo='ssh://git@ssh.github.com:443/mattermost/platform' # In case HTTPS is being weird
 mattermostCommit='0387ac799792fdd0684b863bb029813bbb3eccf7'
-mattermostCloneDir='mattermost'
-mattermostCopyDir="$mattermostCloneDir-patched"
 patchesDir='patches'
 confirmedNonAutoSetupFile="$HOME"'/.config/mattermost-patches-1064/.setup-ok'
+
+function abs_path() {
+  perl -MCwd -le '
+    for (@ARGV) {
+      if ($p = Cwd::abs_path $_) {
+        print $p;
+      } else {
+        warn "abs_path: $_: $!\n";
+        $ret = 1;
+      }
+    }
+    exit $ret' "$@"
+}
+
+export GOPATH="$(abs_path ./mattergo)"
+export PATH="$PATH:$GOPATH/bin"
+
+mattermostCloneDir="$GOPATH/src/github.com/mattermost"
+mattermostCopyDir="./mattermost-patched"
 
 if [[ ! -f "$confirmedNonAutoSetupFile" ]]; then
     echo ">>> Please ensure that you have setup your build env as http://docs.mattermost.com/developer/developer-setup.html says."
@@ -18,10 +35,25 @@ if [[ ! -f "$confirmedNonAutoSetupFile" ]]; then
     touch "$confirmedNonAutoSetupFile"
 fi
 
-# Check clone dir
+# Setup GO
+mkdir -p "$GOPATH"
+ulimit -n 8096
 
+echo ">>> Assuming you have nodejs."
+echo ">>> Assuming you have ruby and compass."
+echo -n ">>> Are the above assumptions correct [Y/n]? "
+read ok
+if [[ "x$ok" == "x" ]]; then
+    ok=y
+fi
+if [[ "x$ok" != "xy" ]]; then
+    echo ">>> Aborting!"
+    exit 1
+fi
+
+# Check clone dir
 echo ">>> Checking '$mattermostCloneDir'"
-mkdir "$mattermostCloneDir" || true # ok if it exists
+mkdir -p "$mattermostCloneDir" || true # ok if it exists
 cd "$mattermostCloneDir"
     if [ ! -d ./.git ]; then
         # Clone it
@@ -43,6 +75,7 @@ cd "$mattermostCopyDir"
     echo ">>> Applying patches"
     find "../$patchesDir" -name '*.patch' -exec ./../apply-patch.sh {} \;
     echo ">>> Building patched mattermost."
-
+    make test
+    make run
 cd ".."
 echo ">>> All done!"
