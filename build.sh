@@ -20,6 +20,13 @@ function abs_path() {
     exit $ret' "$@"
 }
 
+function cdp() {
+    cd "$@"
+    echo '>>> [Changing directory to '"$(pwd)"']'
+}
+
+sourceWorkDir="$(pwd)"
+
 export GOPATH="$(abs_path ./mattergo)"
 export PATH="$PATH:$GOPATH/bin"
 
@@ -39,22 +46,24 @@ fi
 mkdir -p "$GOPATH"
 ulimit -n 8096
 
-echo ">>> Assuming you have nodejs."
-echo ">>> Assuming you have ruby and compass."
-echo -n ">>> Are the above assumptions correct [Y/n]? "
-read ok
-if [[ "x$ok" == "x" ]]; then
-    ok=y
-fi
-if [[ "x$ok" != "xy" ]]; then
-    echo ">>> Aborting!"
-    exit 1
+if [[ "x$1" != "xy" ]]; then
+    echo ">>> Assuming you have nodejs."
+    echo ">>> Assuming you have ruby and compass."
+    echo -n ">>> Are the above assumptions correct [Y/n]? "
+    read ok
+    if [[ "x$ok" == "x" ]]; then
+        ok=y
+    fi
+    if [[ "x$ok" != "xy" ]]; then
+        echo ">>> Aborting!"
+        exit 1
+    fi
 fi
 
 # Check clone dir
 echo ">>> Checking '$mattermostCloneDir'"
 mkdir -p "$mattermostCloneDir" || true # ok if it exists
-cd "$mattermostCloneDir"
+cdp "$mattermostCloneDir"
     if [ ! -d ./.git ]; then
         # Clone it
         echo ">>> Cloning mattermost"
@@ -64,18 +73,18 @@ cd "$mattermostCloneDir"
         echo '>>> Clean up '"$mattermostCloneDir"' please.'
         exit 1
     fi
-cd ".."
+cdp "$sourceWorkDir"
 
 
 echo ">>> Copy-cloning '$mattermostCloneDir' to '$mattermostCopyDir'"
 # Copy clone dir
 [[ -d "$mattermostCopyDir" ]] || git clone "$mattermostCloneDir" "$mattermostCopyDir"
-cd "$mattermostCopyDir"
+cdp "$mattermostCopyDir"
     # Apply patches
     echo ">>> Applying patches"
     find "../$patchesDir" -name '*.patch' -exec ./../apply-patch.sh {} \;
     echo ">>> Building patched mattermost."
     make test
     make run
-cd ".."
+cdp "$sourceWorkDir"
 echo ">>> All done!"
