@@ -33,8 +33,8 @@ patchedPath="$PATH:$patchedGoPath/bin"
 export GOPATH="$(abs_path ./mattergo)"
 export PATH="$PATH:$GOPATH/bin"
 
-mattermostCloneDir="$GOPATH/src/github.com/mattermost"
-mattermostCopyDir="$patchedGoPath/src/github.com/mattermost"
+mattermostCloneDir="$GOPATH/src/github.com/mattermost/platform"
+mattermostCopyDir="$patchedGoPath/src/github.com/mattermost/platform"
 
 if [[ ! -f "$confirmedNonAutoSetupFile" ]]; then
     echo ">>> Please ensure that you have setup your build env as http://docs.mattermost.com/developer/developer-setup.html says."
