@@ -27,11 +27,14 @@ function cdp() {
 
 sourceWorkDir="$(pwd)"
 
+patchedGoPath="$(abs_path ./mattergopatched)"
+patchedPath="$PATH:$patchedGoPath/bin"
+
 export GOPATH="$(abs_path ./mattergo)"
 export PATH="$PATH:$GOPATH/bin"
 
 mattermostCloneDir="$GOPATH/src/github.com/mattermost"
-mattermostCopyDir="./mattermost-patched"
+mattermostCopyDir="$patchedGoPath/src/github.com/mattermost"
 
 if [[ ! -f "$confirmedNonAutoSetupFile" ]]; then
     echo ">>> Please ensure that you have setup your build env as http://docs.mattermost.com/developer/developer-setup.html says."
@@ -82,8 +85,10 @@ echo ">>> Copy-cloning '$mattermostCloneDir' to '$mattermostCopyDir'"
 cdp "$mattermostCopyDir"
     # Apply patches
     echo ">>> Applying patches"
-    find "../$patchesDir" -name '*.patch' -exec ./../apply-patch.sh {} \;
+    find "$sourceWorkDir/$patchesDir" -name '*.patch' -exec "$sourceWorkDir/apply-patch.sh" {} \;
     echo ">>> Building patched mattermost."
+    export GOPATH="$patchedGoPath"
+    export PATH="$patchedPath"
     make test
     make run
 cdp "$sourceWorkDir"
