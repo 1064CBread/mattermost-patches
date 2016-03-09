@@ -1,14 +1,14 @@
-From 4c58ca7233bde10f49da9e63a46c212c0a7602da Mon Sep 17 00:00:00 2001
+From 272d9ca4e8eeed1366f088a7a8b1014420846d0c Mon Sep 17 00:00:00 2001
 From: Samuel Kim <ubuntor2000@gmail.com>
-Date: Wed, 9 Mar 2016 12:55:50 -0500
-Subject: [PATCH] add support for inline tex
+Date: Wed, 9 Mar 2016 16:25:35 -0500
+Subject: [PATCH] add support for inline latex
 
 ---
- web/react/utils/markdown.jsx | 176 ++++++++++++++++++++++++++++++++++++++++++-
- 1 file changed, 174 insertions(+), 2 deletions(-)
+ web/react/utils/markdown.jsx | 289 ++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 287 insertions(+), 2 deletions(-)
 
 diff --git a/web/react/utils/markdown.jsx b/web/react/utils/markdown.jsx
-index 4939160..d176e7b 100644
+index 4939160..cb84476 100644
 --- a/web/react/utils/markdown.jsx
 +++ b/web/react/utils/markdown.jsx
 @@ -69,9 +69,9 @@ class MattermostInlineLexer extends marked.InlineLexer {
@@ -23,7 +23,7 @@ index 4939160..d176e7b 100644
  
          // modified version of the regex that allows links starting with www and those surrounded by parentheses
          // the original is /^(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/
-@@ -80,7 +80,152 @@ class MattermostInlineLexer extends marked.InlineLexer {
+@@ -80,7 +80,265 @@ class MattermostInlineLexer extends marked.InlineLexer {
          // modified version of the regex that allows <links> starting with www.
          // the original is /^<([^ >]+(@|:\/)[^ >]+)>/
          this.rules.autolink = /^<((?:[^ >]+(@|:\/)|www\.)[^ >]+)>/;
@@ -31,143 +31,256 @@ index 4939160..d176e7b 100644
 +        this.rules.tex = /^\$(?!\$)(.*?)\$/;
      }
 +
++
 +    output(src) {
-+        var out = ''
-+            , link
-+            , text
-+            , href
-+            , cap;
++        var link, text, href, cap, tokens = [];
 +
 +        while (src) {
 +            // escape
 +            if (cap = this.rules.escape.exec(src)) {
-+              src = src.substring(cap[0].length);
-+              out += cap[1];
-+              continue;
++                src = src.substring(cap[0].length);
++
++                tokens.push({
++                    type: 'text',
++                    text: cap[1]
++                });
++                continue;
 +            }
 +
 +            // autolink
 +            if (cap = this.rules.autolink.exec(src)) {
-+              src = src.substring(cap[0].length);
-+              if (cap[2] === '@') {
-+                text = cap[1].charAt(6) === ':'
-+                  ? this.mangle(cap[1].substring(7))
-+                  : this.mangle(cap[1]);
-+                href = this.mangle('mailto:') + text;
-+              } else {
-+                text = TextFormatting.sanitizeHtml(cap[1]);
-+                href = text;
-+              }
-+              out += this.renderer.link(href, null, text);
-+              continue;
++                src = src.substring(cap[0].length);
++                if (cap[2] === '@') {
++                    text = cap[1].charAt(6) === ':' ? this.mangle(cap[1].substring(7)) : this.mangle(cap[1]);
++                    href = this.mangle('mailto:') + text;
++                } else {
++                    text = TextFormatting.sanitizeHtml(cap[1]);
++                    href = text;
++                }
++
++                tokens.push({
++                    type: 'link',
++                    text: text,
++                    title: null,
++                    href: href
++                });
++                continue;
 +            }
 +
 +            // url (gfm)
 +            if (!this.inLink && (cap = this.rules.url.exec(src))) {
-+              src = src.substring(cap[0].length);
-+              text = TextFormatting.sanitizeHtml(cap[1]);
-+              href = text;
-+              out += this.renderer.link(href, null, text);
-+              continue;
++                src = src.substring(cap[0].length);
++                text = TextFormatting.sanitizeHtml(cap[1]);
++                href = text;
++
++                tokens.push({
++                    type: 'link',
++                    text: text,
++                    title: null,
++                    href: href
++                });
++                continue;
 +            }
 +
 +            // tag
 +            if (cap = this.rules.tag.exec(src)) {
-+              if (!this.inLink && /^<a /i.test(cap[0])) {
-+                this.inLink = true;
-+              } else if (this.inLink && /^<\/a>/i.test(cap[0])) {
-+                this.inLink = false;
-+              }
-+              src = src.substring(cap[0].length);
-+              out += this.options.sanitize
-+                ? this.options.sanitizer
-+                  ? this.options.sanitizer(cap[0])
-+                  : TextFormatting.sanitizeHtml(cap[0])
-+                : cap[0]
-+              continue;
++                if (!this.inLink && /^<a /i.test(cap[0])) {
++                    this.inLink = true;
++                } else if (this.inLink && /^<\/a>/i.test(cap[0])) {
++                    this.inLink = false;
++                }
++                src = src.substring(cap[0].length);
++
++                if (this.options.sanitize) {
++                    if (this.options.sanitizer) {
++                        tokens.push({
++                            type: 'text',
++                            text: this.options.sanitizer(cap[0])
++                        });
++                    } else {
++                        tokens.push({
++                            type: 'text',
++                            text: TextFormatting.sanitizeHtml(cap[0])
++                        });
++                    }
++                } else {
++                    tokens.push({
++                        type: 'text',
++                        text: cap[0]
++                    });
++                }
++                continue;
 +            }
 +
 +            // link
 +            if (cap = this.rules.link.exec(src)) {
-+              src = src.substring(cap[0].length);
-+              this.inLink = true;
-+              out += this.outputLink(cap, {
-+                href: cap[2],
-+                title: cap[3]
-+              });
-+              this.inLink = false;
-+              continue;
++                src = src.substring(cap[0].length);
++                this.inLink = true;
++                tokens.push({
++                    type: 'preformatted',
++                    text: this.outputLink(cap, {
++                        href: cap[2],
++                        title: cap[3]
++                    })
++                });
++                this.inLink = false;
++                continue;
 +            }
 +
 +            // reflink, nolink
-+            if ((cap = this.rules.reflink.exec(src))
-+                || (cap = this.rules.nolink.exec(src))) {
-+              src = src.substring(cap[0].length);
-+              link = (cap[2] || cap[1]).replace(/\s+/g, ' ');
-+              link = this.links[link.toLowerCase()];
-+              if (!link || !link.href) {
-+                out += cap[0].charAt(0);
-+                src = cap[0].substring(1) + src;
++            if ((cap = this.rules.reflink.exec(src)) || (cap = this.rules.nolink.exec(src))) {
++                src = src.substring(cap[0].length);
++                link = (cap[2] || cap[1]).replace(/\s+/g, ' ');
++                link = this.links[link.toLowerCase()];
++                if (!link || !link.href) {
++                    tokens.push({
++                        type: 'text',
++                        text: cap[0].charAt(0)
++                    });
++                    src = cap[0].substring(1) + src;
++                    continue;
++                }
++                this.inLink = true;
++                tokens.push({
++                    type: 'preformatted',
++                    text: this.outputLink(cap, link)
++                });
++                this.inLink = false;
 +                continue;
-+              }
-+              this.inLink = true;
-+              out += this.outputLink(cap, link);
-+              this.inLink = false;
-+              continue;
 +            }
 +
 +            // strong
 +            if (cap = this.rules.strong.exec(src)) {
-+              src = src.substring(cap[0].length);
-+              out += this.renderer.strong(this.output(cap[2] || cap[1]));
-+              continue;
++                src = src.substring(cap[0].length);
++                tokens.push({
++                    type: 'strong',
++                    text: this.output(cap[2] || cap[1])
++                });
++                continue;
 +            }
 +
 +            // em
 +            if (cap = this.rules.em.exec(src)) {
-+              src = src.substring(cap[0].length);
-+              out += this.renderer.em(this.output(cap[2] || cap[1]));
-+              continue;
++                src = src.substring(cap[0].length);
++                tokens.push({
++                    type: 'em',
++                    text: this.output(cap[2] || cap[1])
++                });
++                continue;
 +            }
 +
 +            // code
 +            if (cap = this.rules.code.exec(src)) {
-+              src = src.substring(cap[0].length);
-+              out += this.renderer.codespan(TextFormatting.sanitizeHtml(cap[2], true));
-+              continue;
++                src = src.substring(cap[0].length);
++                tokens.push({
++                    type: 'code',
++                    text: TextFormatting.sanitizeHtml(cap[2], true)
++                });
++                continue;
 +            }
 +
 +            // inline tex
 +            if (cap = this.rules.tex.exec(src)) {
 +                src = src.substring(cap[0].length);
-+                out += this.renderer.tex(cap[1], false);
++                tokens.push({
++                    type: 'tex',
++                    text: cap[1],
++                    display: false
++                });
 +                continue;
 +            }
 +
 +            // br
 +            if (cap = this.rules.br.exec(src)) {
-+              src = src.substring(cap[0].length);
-+              out += this.renderer.br();
-+              continue;
++                src = src.substring(cap[0].length);
++                tokens.push({
++                    type: 'br'
++                });
++                continue;
 +            }
 +
 +            // del (gfm)
 +            if (cap = this.rules.del.exec(src)) {
-+              src = src.substring(cap[0].length);
-+              out += this.renderer.del(this.output(cap[1]));
-+              continue;
++                src = src.substring(cap[0].length);
++                tokens.push({
++                    type: 'del',
++                    text: this.output(cap[1])
++                });
++                continue;
 +            }
 +
 +            // text
 +            if (cap = this.rules.text.exec(src)) {
-+              src = src.substring(cap[0].length);
-+              out += this.renderer.text(TextFormatting.sanitizeHtml(this.smartypants(cap[0])));
-+              continue;
++                src = src.substring(cap[0].length);
++                tokens.push({
++                    type: 'text',
++                    text: TextFormatting.sanitizeHtml(this.smartypants(cap[0]))
++                });
++                continue;
 +            }
 +
 +            if (src) {
-+              throw new
++                throw new
 +                Error('Infinite loop on byte: ' + src.charCodeAt(0));
++            }
++        }
++
++        // combine adjacent text tokens into one
++        tokens = tokens.reduce(function(arr, token) {
++            if (arr.length > 0) {
++                var prevToken = arr[arr.length - 1];
++
++                if (prevToken.type === 'text' && token.type === 'text') {
++                    prevToken.text += token.text;
++                } else {
++                    arr.push(token);
++                }
++
++                return arr;
++            } else {
++                return [token];
++            }
++        }, []);
++
++        return this.renderTokens(tokens);
++    };
++
++    renderTokens(tokens) {
++        var out = '';
++
++        for (var i = 0; i < tokens.length; i++) {
++            var token = tokens[i];
++
++            switch (token.type) {
++                case 'text':
++                    out += this.renderer.text(token.text);
++                    break;
++                case 'link':
++                    out += this.renderer.link(token.href, token.title, token.text);
++                    break;
++                case 'preformatted':
++                    out += token.text;
++                    break;
++                case 'strong':
++                    out += this.renderer.strong(token.text);
++                    break;
++                case 'em':
++                    out += this.renderer.em(token.text);
++                    break;
++                case 'code':
++                    out += this.renderer.codespan(token.text);
++                    break;
++                case 'tex':
++                    out += this.renderer.tex(token.text, token.display);
++                    break;
++                case 'br':
++                    out += this.renderer.br();
++                    break;
++                case 'del':
++                    out += this.renderer.del(token.text);
++                    break;
++                default:
++                    console.log('unrecognized inline token type ' + token.type);
 +            }
 +        }
 +
@@ -176,7 +289,7 @@ index 4939160..d176e7b 100644
  }
  
  class MattermostParser extends marked.Parser {
-@@ -95,6 +240,14 @@ class MattermostParser extends marked.Parser {
+@@ -95,6 +353,14 @@ class MattermostParser extends marked.Parser {
  
          return out;
      }
@@ -191,7 +304,7 @@ index 4939160..d176e7b 100644
  }
  
  class MattermostMarkdownRenderer extends marked.Renderer {
-@@ -155,6 +308,25 @@ class MattermostMarkdownRenderer extends marked.Renderer {
+@@ -155,6 +421,25 @@ class MattermostMarkdownRenderer extends marked.Renderer {
          return '<span class="codespan__pre-wrap">' + super.codespan(text) + '</span>';
      }
  
@@ -209,7 +322,7 @@ index 4939160..d176e7b 100644
 +                    '</pre>'
 +                );
 +            } else {
-+                return this.codespan(text);
++                return this.codespan(TextFormatting.sanitizeHtml(text));
 +            }
 +        }
 +    }
