@@ -85,7 +85,7 @@ echo ">>> Copy-cloning '$mattermostCloneDir' to '$mattermostCopyDir'"
 cdp "$mattermostCopyDir"
     # Apply patches
     echo ">>> Applying patches"
-    find "$sourceWorkDir/$patchesDir" -name '*.patch' | sort | xargs -r -n1 "$sourceWorkDir/apply-patch.sh"
+    find "$sourceWorkDir/$patchesDir" -name '*.patch' | sort | xargs -n1 "$sourceWorkDir/apply-patch.sh"
     echo ">>> Building patched mattermost."
     export GOPATH="$patchedGoPath"
     export PATH="$patchedPath"
