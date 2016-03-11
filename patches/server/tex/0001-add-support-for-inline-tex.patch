@@ -1,14 +1,14 @@
-From 272d9ca4e8eeed1366f088a7a8b1014420846d0c Mon Sep 17 00:00:00 2001
+From b7fb5ad4bc5e3b9e3612e3edebff980323d42dc7 Mon Sep 17 00:00:00 2001
 From: Samuel Kim <ubuntor2000@gmail.com>
-Date: Wed, 9 Mar 2016 16:25:35 -0500
-Subject: [PATCH] add support for inline latex
+Date: Thu, 10 Mar 2016 21:39:29 -0500
+Subject: [PATCH] add support for inline tex
 
 ---
- web/react/utils/markdown.jsx | 289 ++++++++++++++++++++++++++++++++++++++++++-
- 1 file changed, 287 insertions(+), 2 deletions(-)
+ web/react/utils/markdown.jsx | 305 ++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 303 insertions(+), 2 deletions(-)
 
 diff --git a/web/react/utils/markdown.jsx b/web/react/utils/markdown.jsx
-index 4939160..cb84476 100644
+index 4939160..c3543f9 100644
 --- a/web/react/utils/markdown.jsx
 +++ b/web/react/utils/markdown.jsx
 @@ -69,9 +69,9 @@ class MattermostInlineLexer extends marked.InlineLexer {
@@ -23,21 +23,28 @@ index 4939160..cb84476 100644
  
          // modified version of the regex that allows links starting with www and those surrounded by parentheses
          // the original is /^(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/
-@@ -80,7 +80,265 @@ class MattermostInlineLexer extends marked.InlineLexer {
+@@ -80,6 +80,281 @@ class MattermostInlineLexer extends marked.InlineLexer {
          // modified version of the regex that allows <links> starting with www.
          // the original is /^<([^ >]+(@|:\/)[^ >]+)>/
          this.rules.autolink = /^<((?:[^ >]+(@|:\/)|www\.)[^ >]+)>/;
 +
++        // modified version of the regex that allows for $ to be escaped.
++        this.rules.escape = /^\\([\\`*{}\[\]()#+\-.!_>~|\$])/;
++
 +        this.rules.tex = /^\$(?!\$)(.*?)\$/;
-     }
++    }
 +
++    output(originalSrc) {
++        var link;
++        var text;
++        var href;
++        var tokens = [];
 +
-+    output(src) {
-+        var link, text, href, cap, tokens = [];
-+
++        let src = originalSrc;
 +        while (src) {
 +            // escape
-+            if (cap = this.rules.escape.exec(src)) {
++            let cap = this.rules.escape.exec(src);
++            if (cap) {
 +                src = src.substring(cap[0].length);
 +
 +                tokens.push({
@@ -48,7 +55,8 @@ index 4939160..cb84476 100644
 +            }
 +
 +            // autolink
-+            if (cap = this.rules.autolink.exec(src)) {
++            cap = this.rules.autolink.exec(src);
++            if (cap) {
 +                src = src.substring(cap[0].length);
 +                if (cap[2] === '@') {
 +                    text = cap[1].charAt(6) === ':' ? this.mangle(cap[1].substring(7)) : this.mangle(cap[1]);
@@ -68,7 +76,8 @@ index 4939160..cb84476 100644
 +            }
 +
 +            // url (gfm)
-+            if (!this.inLink && (cap = this.rules.url.exec(src))) {
++            cap = this.rules.url.exec(src);
++            if (!this.inLink && cap) {
 +                src = src.substring(cap[0].length);
 +                text = TextFormatting.sanitizeHtml(cap[1]);
 +                href = text;
@@ -83,10 +92,11 @@ index 4939160..cb84476 100644
 +            }
 +
 +            // tag
-+            if (cap = this.rules.tag.exec(src)) {
-+                if (!this.inLink && /^<a /i.test(cap[0])) {
++            cap = this.rules.tag.exec(src);
++            if (cap) {
++                if (!this.inLink && (/^<a /i).test(cap[0])) {
 +                    this.inLink = true;
-+                } else if (this.inLink && /^<\/a>/i.test(cap[0])) {
++                } else if (this.inLink && (/^<\/a>/i).test(cap[0])) {
 +                    this.inLink = false;
 +                }
 +                src = src.substring(cap[0].length);
@@ -113,7 +123,8 @@ index 4939160..cb84476 100644
 +            }
 +
 +            // link
-+            if (cap = this.rules.link.exec(src)) {
++            cap = this.rules.link.exec(src);
++            if (cap) {
 +                src = src.substring(cap[0].length);
 +                this.inLink = true;
 +                tokens.push({
@@ -150,7 +161,8 @@ index 4939160..cb84476 100644
 +            }
 +
 +            // strong
-+            if (cap = this.rules.strong.exec(src)) {
++            cap = this.rules.strong.exec(src);
++            if (cap) {
 +                src = src.substring(cap[0].length);
 +                tokens.push({
 +                    type: 'strong',
@@ -160,7 +172,8 @@ index 4939160..cb84476 100644
 +            }
 +
 +            // em
-+            if (cap = this.rules.em.exec(src)) {
++            cap = this.rules.em.exec(src);
++            if (cap) {
 +                src = src.substring(cap[0].length);
 +                tokens.push({
 +                    type: 'em',
@@ -170,7 +183,8 @@ index 4939160..cb84476 100644
 +            }
 +
 +            // code
-+            if (cap = this.rules.code.exec(src)) {
++            cap = this.rules.code.exec(src);
++            if (cap) {
 +                src = src.substring(cap[0].length);
 +                tokens.push({
 +                    type: 'code',
@@ -180,7 +194,8 @@ index 4939160..cb84476 100644
 +            }
 +
 +            // inline tex
-+            if (cap = this.rules.tex.exec(src)) {
++            cap = this.rules.tex.exec(src);
++            if (cap) {
 +                src = src.substring(cap[0].length);
 +                tokens.push({
 +                    type: 'tex',
@@ -191,7 +206,8 @@ index 4939160..cb84476 100644
 +            }
 +
 +            // br
-+            if (cap = this.rules.br.exec(src)) {
++            cap = this.rules.br.exec(src);
++            if (cap) {
 +                src = src.substring(cap[0].length);
 +                tokens.push({
 +                    type: 'br'
@@ -200,7 +216,8 @@ index 4939160..cb84476 100644
 +            }
 +
 +            // del (gfm)
-+            if (cap = this.rules.del.exec(src)) {
++            cap = this.rules.del.exec(src);
++            if (cap) {
 +                src = src.substring(cap[0].length);
 +                tokens.push({
 +                    type: 'del',
@@ -210,7 +227,8 @@ index 4939160..cb84476 100644
 +            }
 +
 +            // text
-+            if (cap = this.rules.text.exec(src)) {
++            cap = this.rules.text.exec(src);
++            if (cap) {
 +                src = src.substring(cap[0].length);
 +                tokens.push({
 +                    type: 'text',
@@ -226,7 +244,7 @@ index 4939160..cb84476 100644
 +        }
 +
 +        // combine adjacent text tokens into one
-+        tokens = tokens.reduce(function(arr, token) {
++        tokens = tokens.reduce(function combine(arr, token) {
 +            if (arr.length > 0) {
 +                var prevToken = arr[arr.length - 1];
 +
@@ -237,13 +255,12 @@ index 4939160..cb84476 100644
 +                }
 +
 +                return arr;
-+            } else {
-+                return [token];
 +            }
++            return [token];
 +        }, []);
 +
 +        return this.renderTokens(tokens);
-+    };
++    }
 +
 +    renderTokens(tokens) {
 +        var out = '';
@@ -252,44 +269,43 @@ index 4939160..cb84476 100644
 +            var token = tokens[i];
 +
 +            switch (token.type) {
-+                case 'text':
-+                    out += this.renderer.text(token.text);
-+                    break;
-+                case 'link':
-+                    out += this.renderer.link(token.href, token.title, token.text);
-+                    break;
-+                case 'preformatted':
-+                    out += token.text;
-+                    break;
-+                case 'strong':
-+                    out += this.renderer.strong(token.text);
-+                    break;
-+                case 'em':
-+                    out += this.renderer.em(token.text);
-+                    break;
-+                case 'code':
-+                    out += this.renderer.codespan(token.text);
-+                    break;
-+                case 'tex':
-+                    out += this.renderer.tex(token.text, token.display);
-+                    break;
-+                case 'br':
-+                    out += this.renderer.br();
-+                    break;
-+                case 'del':
-+                    out += this.renderer.del(token.text);
-+                    break;
-+                default:
-+                    console.log('unrecognized inline token type ' + token.type);
++            case 'text':
++                out += this.renderer.text(token.text);
++                break;
++            case 'link':
++                out += this.renderer.link(token.href, token.title, token.text);
++                break;
++            case 'preformatted':
++                out += token.text;
++                break;
++            case 'strong':
++                out += this.renderer.strong(token.text);
++                break;
++            case 'em':
++                out += this.renderer.em(token.text);
++                break;
++            case 'code':
++                out += this.renderer.codespan(token.text);
++                break;
++            case 'tex':
++                out += this.renderer.tex(token.text, token.display);
++                break;
++            case 'br':
++                out += this.renderer.br();
++                break;
++            case 'del':
++                out += this.renderer.del(token.text);
++                break;
++            default:
++                break;
 +            }
 +        }
 +
 +        return out;
-+    };
+     }
  }
  
- class MattermostParser extends marked.Parser {
-@@ -95,6 +353,14 @@ class MattermostParser extends marked.Parser {
+@@ -95,6 +370,14 @@ class MattermostParser extends marked.Parser {
  
          return out;
      }
@@ -304,7 +320,7 @@ index 4939160..cb84476 100644
  }
  
  class MattermostMarkdownRenderer extends marked.Renderer {
-@@ -155,6 +421,25 @@ class MattermostMarkdownRenderer extends marked.Renderer {
+@@ -155,6 +438,24 @@ class MattermostMarkdownRenderer extends marked.Renderer {
          return '<span class="codespan__pre-wrap">' + super.codespan(text) + '</span>';
      }
  
@@ -321,9 +337,8 @@ index 4939160..cb84476 100644
 +                        '</code>' +
 +                    '</pre>'
 +                );
-+            } else {
-+                return this.codespan(TextFormatting.sanitizeHtml(text));
 +            }
++            return this.codespan(TextFormatting.sanitizeHtml(text));
 +        }
 +    }
 +
