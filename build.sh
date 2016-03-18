@@ -3,7 +3,7 @@
 set -e
 mattermostRepo='https://github.com/mattermost/platform'
 mattermostSshRepo='ssh://git@ssh.github.com:443/mattermost/platform' # In case HTTPS is being weird
-mattermostCommit='3c141551488b9e956b4e1de0267f35768a25faed'
+mattermostCommit='f189bc2073cf800c5f4506a69bdb51d7065269bf'
 patchesDir='patches'
 confirmedNonAutoSetupFile="$HOME"'/.config/mattermost-patches-1064/.setup-ok'
 
