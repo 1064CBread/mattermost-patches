@@ -71,18 +71,19 @@ cdp "$mattermostCloneDir"
         # Clone it
         echo ">>> Cloning mattermost"
         git clone "$mattermostRepo" . || git clone "$mattermostSshRepo" .
-        git checkout "$mattermostCommit"
     fi
     if ! git status --porcelain >/dev/null 2>&1; then
         echo '>>> Clean up '"$mattermostCloneDir"' please.'
         exit 1
     fi
+    # Checkout specific commit for patches
+    git checkout "$mattermostCommit"
 cdp "$sourceWorkDir"
 
 
 echo ">>> Copy-cloning '$mattermostCloneDir' to '$mattermostCopyDir'"
-# Copy clone dir
-[[ -d "$mattermostCopyDir" ]] || git clone "$mattermostCloneDir" "$mattermostCopyDir"
+# Copy clone dir, removing to prevent patch weirdness
+rm -rf "$mattermostCopyDir" && git clone "$mattermostCloneDir" "$mattermostCopyDir"
 cdp "$mattermostCopyDir"
     # Apply patches
     echo ">>> Applying patches"
@@ -90,7 +91,10 @@ cdp "$mattermostCopyDir"
     echo ">>> Building patched mattermost."
     export GOPATH="$patchedGoPath"
     export PATH="$patchedPath"
-    make test
+    if [[ "x$MP_RUN_TESTS" == "x" ]] || [[ "x$MP_RUN_TESTS" == "x1" ]]; then
+        echo 'Running tests...'
+        make test
+    fi
     make run
 cdp "$sourceWorkDir"
 echo ">>> All done!"
