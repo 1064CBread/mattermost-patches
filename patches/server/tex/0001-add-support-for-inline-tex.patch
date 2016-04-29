@@ -4,13 +4,13 @@ Date: Thu, 10 Mar 2016 21:39:29 -0500
 Subject: [PATCH] add support for inline tex
 
 ---
- web/react/utils/markdown.jsx | 305 ++++++++++++++++++++++++++++++++++++++++++-
+ webapp/utils/markdown.jsx | 305 ++++++++++++++++++++++++++++++++++++++++++-
  1 file changed, 303 insertions(+), 2 deletions(-)
 
-diff --git a/web/react/utils/markdown.jsx b/web/react/utils/markdown.jsx
+diff --git a/webapp/utils/markdown.jsx b/webapp/utils/markdown.jsx
 index 4939160..c3543f9 100644
---- a/web/react/utils/markdown.jsx
-+++ b/web/react/utils/markdown.jsx
+--- a/webapp/utils/markdown.jsx
++++ b/webapp/utils/markdown.jsx
 @@ -69,9 +69,9 @@ class MattermostInlineLexer extends marked.InlineLexer {
  
          this.rules = Object.assign({}, this.rules);
