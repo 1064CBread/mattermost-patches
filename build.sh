@@ -71,6 +71,7 @@ cdp "$mattermostCloneDir"
         # Clone it
         echo ">>> Cloning mattermost"
         git clone "$mattermostRepo" . || git clone "$mattermostSshRepo" .
+        git checkout "$mattermostCommit"
     fi
     if ! git status --porcelain >/dev/null 2>&1; then
         echo '>>> Clean up '"$mattermostCloneDir"' please.'
